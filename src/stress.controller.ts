@@ -5,7 +5,7 @@ import { SocketService } from './socket.service';
 @Controller('stress-test')
 export class StressTestController {
   private clients: Socket[] = [];
-  private numberOfClients = 10;
+  private numberOfClients = 30;
 
   constructor(private readonly socketService: SocketService) {
     this.initializeClients();
@@ -13,10 +13,20 @@ export class StressTestController {
 
   private initializeClients() {
     for (let i = 0; i < this.numberOfClients; i++) {
-      const client = io('http://localhost:1900');
+      const client = io('http://localhost:1800', {
+        timeout: 10000,
+      });
 
       client.on('connect', () => {
         console.log(`Client ${i + 1} connected to socket server`);
+      });
+
+      client.on('disconnect', (reason) => {
+        console.log(`Client ${i + 1} disconnected: ${reason}`);
+      });
+
+      client.on('error', (error) => {
+        console.error(`Client ${i + 1} encountered an error: ${error}`);
       });
 
       client.on(`TEST_EVENT_${i + 1}`, (data) => {
@@ -34,7 +44,7 @@ export class StressTestController {
   async startStressTest() {
     this.clients.forEach((client, index) => {
       const event = `socket-event`;
-      this.socketService.emit(event, {event: `TEST_EVENT_${index + 1}`});
+      this.socketService.emit(event, { event: `TEST_EVENT_${index + 1}` });
       console.log(`Client ${index + 1} emitted event: ${event}`);
     });
 
